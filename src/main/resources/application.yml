@@ -1,0 +1,23 @@
+server:
+  port: 8848
+spring:
+  datasource:
+    username: root
+    password: root
+    url: jdbc:mysql://localhost:3306/zutnlp_cs_admin?useUnicode=true&characterEncoding=UTF8&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: test
+  http:
+    encoding:
+      charset: UTF-8
+#    properties:
+#      hibernate:
+#        dialect: org.hibernate.dialect.MySQL5Dialect
