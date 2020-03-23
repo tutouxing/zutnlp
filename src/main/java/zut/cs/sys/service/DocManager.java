@@ -1,6 +1,5 @@
 package zut.cs.sys.service;
 
-import zut.cs.sys.base.service.GenericManager;
 import zut.cs.sys.domain.Doc;
 
 import java.util.List;
@@ -17,6 +16,14 @@ public interface DocManager  {
 
      */
     List<Doc> findByAnnotator(String annotator);
-    String setObj(Doc doc);
+    String saveObj(Doc doc);
 
+    Boolean delDoc(Doc doc);
+    Doc findDocById(String id);
+    String updateDoc(Doc doc);
+    List<Doc> findAllDocs();
+    List<Doc> findAllDocsByMulti();
+    List<Doc> findAllTask();
+    Boolean publishTask(Doc doc);
+    Boolean processDoc(Doc doc);
 }

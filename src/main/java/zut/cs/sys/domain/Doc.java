@@ -2,10 +2,10 @@ package zut.cs.sys.domain;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.GenericGenerator;
 import zut.cs.sys.base.domain.BaseEntity;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.Date;
 
 @Entity
@@ -23,7 +23,7 @@ public class Doc  {
      */
     private static final long serialVersionUID = -4376674977047164L;
     @Id
-    private Long doc_id;
+    private String doc_id;
     private String name;
     private String status;
     private String content;
@@ -31,5 +31,9 @@ public class Doc  {
     private String phrase;
     private String word;
     private String annotator;
-    private Date update_time;
+    private String update_time;
+    private String publish;
+    private String done;
+    private String task_id;
+
 }

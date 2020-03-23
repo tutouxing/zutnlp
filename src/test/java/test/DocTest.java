@@ -1,15 +1,17 @@
 package test;
 
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
-import zut.cs.sys.rest.DocController;
+import zut.cs.sys.SysRunner;
+import zut.cs.sys.domain.Doc;
+import zut.cs.sys.service.DocManager;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest
+@SpringBootTest(classes = SysRunner.class)
 public class DocTest {
     /**
      * @Description: java类作用描述
@@ -20,9 +22,12 @@ public class DocTest {
 
      */
     @Autowired
-    private MongoTemplate mongoTemplate;
+    private DocManager docManager;
     @Test
-    private void test(){
-
+    public void test(){
+        Doc doc=new Doc();
+        doc.setContent("哎~那个金刚圈尺寸太差，前重后轻，左宽右窄，他戴上去很不舒服");
+        boolean flag=docManager.processDoc(doc);
+        System.out.println(flag);
     }
 }
