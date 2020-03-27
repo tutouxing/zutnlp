@@ -71,28 +71,34 @@ public class DocManagerImpl implements DocManager{
     //通过id查询doc
     @Override
     public Doc findDocById(String id) {
-        Query query = new Query(Criteria.where("_id").is(id));
+        Query query = new Query(Criteria.where("doc_id").is(id));
         return mongoTemplate.findById(query,Doc.class);
 //        return mongoTemplate.find(query,Doc.class);
     }
     //通过doc更新
     @Override
-    public String updateDoc(Doc doc) {
-        Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
-        Update update = new Update().set("name", doc.getName())
-                .set("annotation_type", doc.getAnnotation_type())
-                .set("update_time", new Date())
-                .set("annotator",doc.getAnnotator())
-                .set("content",doc.getContent())
-                .set("phrase",doc.getPhrase())
-                .set("status",doc.getStatus());
-        //updateFirst 更新查询返回结果集的第一条
-        mongoTemplate.updateFirst(query, update, Doc.class);
+    public Boolean updateDoc(Doc doc) {
+        try {
+            Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
+            Update update = new Update().set("name", doc.getName())
+                    .set("annotation_type", doc.getAnnotation_type())
+                    .set("update_time", new Date())
+                    .set("annotator",doc.getAnnotator())
+                    .set("content",doc.getContent())
+                    .set("phrase",doc.getPhrase())
+                    .set("status",doc.getStatus());
+            //updateFirst 更新查询返回结果集的第一条
+            mongoTemplate.updateFirst(query, update, Doc.class);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+
         //updateMulti 更新查询返回结果集的全部
 //        mongoTemplate.updateMulti(query,update,Book.class);
         //upsert 更新对象不存在则去添加
 //        mongoTemplate.upsert(query,update,Book.class);
-        return "success";
     }
 
     //获取所有docs
@@ -117,12 +123,11 @@ public class DocManagerImpl implements DocManager{
             String uuid= UUIDUtils.getUUID();
             Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
             Update update = new Update().set("publish","true")
-                    .set("annotator", "admin")
+                    .set("annotator", doc.getAnnotator())
                     .set("update_time", new Date())
-                    .set("phrase","词性分析")
+                    .set("phrase",doc.getPhrase())
                     .set("task_id",uuid);
             UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
-            System.out.println(ur);
             return true;
         }catch (Exception e){
             System.out.println(e.getStackTrace());
@@ -132,8 +137,8 @@ public class DocManagerImpl implements DocManager{
 
     @Override
     public Boolean processDoc(Doc doc) {
-        //初始化
-        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR.dll", CNLPIRLibrary.class);
+        //初始化E:\java\workspace\platform\resources\NLPIR.dll
+        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
         Boolean init_flag = instance.NLPIR_Init("", 1, "0");
         String resultString = null;
         if (false == init_flag) {
@@ -144,8 +149,18 @@ public class DocManagerImpl implements DocManager{
         String sInput = doc.getContent();
         try{
             resultString = instance.NLPIR_ParagraphProcess(sInput, 1);
+            //将分词结果存储到doc
+            String[] segmentWord=resultString.split(" ");
+            Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
+            Update update = new Update().set("word",segmentWord)
+                    .set("annotator", "admin")
+                    .set("update_time", new Date())
+                    .set("phrase","词性分析");
+            UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
             System.out.println("分词结果为：\n " + resultString);
-
+            for (int i=0;i<segmentWord.length;i++){
+                System.out.println(segmentWord[i]);
+            }
         }catch (Exception e){
             e.printStackTrace();
         }

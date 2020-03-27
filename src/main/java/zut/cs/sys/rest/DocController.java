@@ -77,16 +77,17 @@ public class DocController {
 
     @ApiOperation(value = "更新档案")
     @PutMapping(value = "/updateDoc")
-    public String updateDoc(@RequestBody Doc doc){
+    public Boolean updateDoc(@RequestBody Doc doc){
         doc.setPublish("词性标注");
         doc.setAnnotator("admin");
         return docManager.updateDoc(doc);
     }
 
-    @ApiOperation(value = "发布文档即为进行分词和词性标注")
+    @ApiOperation(value = "发布文档即为进行分词和词性标注前端处理")
     @PutMapping(value = "/publishTask")
     public Boolean publishTask(@RequestBody Doc doc){
         doc.setPublish("词性标注");
+        doc.setPhrase("待初审");
         doc.setAnnotator("admin");
         return docManager.publishTask(doc);
     }
@@ -97,9 +98,9 @@ public class DocController {
         return docManager.findAllDocsByMulti();
     }
 
-    @ApiOperation(value = "分词测试")
-    @GetMapping(value = "/segmentWord")
-    public Boolean getSegWord(@RequestParam Doc doc){
+    @ApiOperation(value = "词性分析")
+    @PutMapping(value = "/segmentWord")
+    public Boolean getSegWord(@RequestBody Doc doc){
         return docManager.processDoc(doc);
     }
 

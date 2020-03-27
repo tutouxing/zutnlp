@@ -20,7 +20,7 @@ public interface DocManager  {
 
     Boolean delDoc(Doc doc);
     Doc findDocById(String id);
-    String updateDoc(Doc doc);
+    Boolean updateDoc(Doc doc);
     List<Doc> findAllDocs();
     List<Doc> findAllDocsByMulti();
     List<Doc> findAllTask();
