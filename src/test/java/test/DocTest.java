@@ -27,7 +27,7 @@ public class DocTest {
     public void test(){
         Doc doc=new Doc();
         doc.setContent("哎~那个金刚圈尺寸太差，前重后轻，左宽右窄，他戴上去很不舒服");
-        boolean flag=docManager.processDoc(doc);
-        System.out.println(flag);
+//        boolean flag=docManager.processDoc(doc);
+//        System.out.println(flag);
     }
 }

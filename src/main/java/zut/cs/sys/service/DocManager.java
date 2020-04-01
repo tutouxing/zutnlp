@@ -25,5 +25,6 @@ public interface DocManager  {
     List<Doc> findAllDocsByMulti();
     List<Doc> findAllTask();
     Boolean publishTask(Doc doc);
-    Boolean processDoc(Doc doc);
+    Boolean processDoc(Doc doc,String annotation_type);
+    Boolean recallPublish(Doc doc,String annotation_type);
 }

@@ -31,7 +31,7 @@ public class Doc  {
     private String status;
     //文档内容
     private String content;
-    //标注类型：词性分析、关键字提取
+    //任务类型：中文分词、词性分析、命名实体、专业术语、依存关系、语义角色、新词发现
     private String annotation_type;
     //阶段：初审、终审
     private String phrase;
@@ -39,6 +39,8 @@ public class Doc  {
     private String[] word;
     //标注者：初审专家、终审专家
     private String annotator;
+    //创建时间
+    private String created_time;
     //最后更新时间
     private String update_time;
     //是否发布

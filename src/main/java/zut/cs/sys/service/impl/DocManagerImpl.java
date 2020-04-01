@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import zut.cs.sys.domain.Doc;
 import zut.cs.sys.service.CNLPIRLibrary;
 import zut.cs.sys.service.DocManager;
+import zut.cs.sys.util.DateGenerate;
 import zut.cs.sys.util.UUIDUtils;
 
 
@@ -55,8 +56,6 @@ public class DocManagerImpl implements DocManager{
 //        doc.setUpdate_time(new Date());
 //        docDao.save(doc);
 //        mongoTemplate.insert(doc);
-        String uuid=UUIDUtils.getUUID();
-        doc.setDoc_id(uuid);
         mongoTemplate.save(doc);
         return "insert success!";
     }
@@ -82,7 +81,7 @@ public class DocManagerImpl implements DocManager{
             Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
             Update update = new Update().set("name", doc.getName())
                     .set("annotation_type", doc.getAnnotation_type())
-                    .set("update_time", new Date())
+                    .set("update_time", DateGenerate.getDate())
                     .set("annotator",doc.getAnnotator())
                     .set("content",doc.getContent())
                     .set("phrase",doc.getPhrase())
@@ -124,7 +123,7 @@ public class DocManagerImpl implements DocManager{
             Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
             Update update = new Update().set("publish","true")
                     .set("annotator", doc.getAnnotator())
-                    .set("update_time", new Date())
+                    .set("update_time", DateGenerate.getDate())
                     .set("phrase",doc.getPhrase())
                     .set("task_id",uuid);
             UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
@@ -136,7 +135,7 @@ public class DocManagerImpl implements DocManager{
     }
 
     @Override
-    public Boolean processDoc(Doc doc) {
+    public Boolean processDoc(Doc doc,String annotation_type) {
         //初始化E:\java\workspace\platform\resources\NLPIR.dll
         CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
         Boolean init_flag = instance.NLPIR_Init("", 1, "0");
@@ -154,17 +153,40 @@ public class DocManagerImpl implements DocManager{
             Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
             Update update = new Update().set("word",segmentWord)
                     .set("annotator", "admin")
-                    .set("update_time", new Date())
-                    .set("phrase","词性分析");
+                    .set("update_time", DateGenerate.getDate())
+                    .set("annotation_type",doc.getAnnotation_type()+"/"+annotation_type)
+                    .set("status","待初审");
             UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
             System.out.println("分词结果为：\n " + resultString);
-            for (int i=0;i<segmentWord.length;i++){
-                System.out.println(segmentWord[i]);
-            }
         }catch (Exception e){
             e.printStackTrace();
         }
         return true;
+    }
+
+    @Override
+    public Boolean recallPublish(Doc doc, String annotation_type) {
+        try{
+            String status=null;
+            String temp=doc.getAnnotation_type();
+            if (temp==null)return false;
+            temp=temp.replace(annotation_type,"/");
+            temp=temp.replace("//","/");
+            if(temp!=null){
+                status=doc.getStatus();
+            }else status=null;
+            //提交修改
+            Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
+            Update update = new Update().set("update_time", DateGenerate.getDate())
+                    .set("annotation_type",temp)
+                    .set("status",status)
+                    .set("word",null);
+            UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
     }
 
 }

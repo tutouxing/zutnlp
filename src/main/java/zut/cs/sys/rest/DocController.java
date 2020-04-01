@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import zut.cs.sys.domain.Doc;
 import zut.cs.sys.service.DocManager;
+import zut.cs.sys.util.DateGenerate;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -98,10 +99,16 @@ public class DocController {
         return docManager.findAllDocsByMulti();
     }
 
-    @ApiOperation(value = "词性分析")
-    @PutMapping(value = "/segmentWord")
-    public Boolean getSegWord(@RequestBody Doc doc){
-        return docManager.processDoc(doc);
+    @ApiOperation(value = "词性分析/中文分词等")
+    @PostMapping(value = "/segmentWord")
+    public Boolean getSegWord(@RequestBody Doc doc,@RequestParam(required = false) String annotation_type){
+        return docManager.processDoc(doc,annotation_type);
+    }
+
+    @ApiOperation(value = "发布部分撤销")
+    @PostMapping(value = "/cancelPublishTask")
+    public Boolean cancelPublishTask(@RequestBody Doc doc,@RequestParam(required = false) String annotation_type){
+        return docManager.recallPublish(doc,annotation_type);
     }
 
     @ApiOperation(value = "upload doc")
@@ -132,11 +139,8 @@ public class DocController {
             UUID uuid = UUID.randomUUID();
             doc.setDoc_id(uuid.toString());
             doc.setName(name);
-            SimpleDateFormat sdf =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss" );
-            Date date=new Date();
-            doc.setUpdate_time(sdf.format(date));
+            doc.setCreated_time(DateGenerate.getDate());
             doc.setPhrase("未标注");
-            doc.setPublish("中文分词/词性标注");
             doc.setDone("无");
             //转换成中文编码
             doc.setContent(new String(bytes,"GBK"));
