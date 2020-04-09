@@ -14,7 +14,7 @@ public class DateGenerate {
 
      */
     public static String getDate(){
-        SimpleDateFormat sdf =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss SSS" );
+        SimpleDateFormat sdf =new SimpleDateFormat("yyyy-MM-dd HH:mm:ss" );
         Date d= new Date();
         String str = sdf.format(d);
         return str;

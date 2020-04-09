@@ -1,18 +1,26 @@
 package zut.cs.sys.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import zut.cs.sys.base.domain.BaseEntity;
 
 import javax.persistence.*;
+import java.io.InputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 
-@Entity
+
 @Getter
 @Setter
+@Document(collection = "docs")
 //public class Doc extends BaseEntity {
-public class Doc  {
+public class Doc  implements Serializable {
     /**
      * @Description: doc which contains annotated and unannotated
 
@@ -27,27 +35,23 @@ public class Doc  {
     private String doc_id;
     //文档名
     private String name;
-    //状态：已标注，未标注
-    private String status;
     //文档内容
     private String content;
-    //任务类型：中文分词、词性分析、命名实体、专业术语、依存关系、语义角色、新词发现
-    private String annotation_type;
-    //阶段：初审、终审
-    private String phrase;
-    //分词结果
-    private String[] word;
-    //标注者：初审专家、终审专家
-    private String annotator;
+    //文档类型
+    private String type;
+    //发布者
+    private String publisher;
+    //字数
+    private Long len;
     //创建时间
-    private String created_time;
-    //最后更新时间
-    private String update_time;
-    //是否发布
-    private String publish;
-    //
-    private String done;
-    //任务id
-    private String task_id;
-
+    private String  created_time;
+    //最新修改时间
+    private String last_modified;
+    //已发布
+    private ArrayList<String> publish;
+    //已完成
+    private ArrayList<String> done;
+    //任务列表
+    @DBRef
+    private ArrayList<AnnotateTask> tasks;
 }
