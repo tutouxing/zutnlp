@@ -35,6 +35,8 @@ public class AnnotateTask implements Serializable {
     private String phrase;
     //分词结果
     private String[] segmentWord;
+    //词性标注结果
+    private String[] propertyWord;
     //标注者：初审专家、终审专家/admin
     private String annotator;
     //任务创建时间

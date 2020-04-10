@@ -27,11 +27,10 @@ import zut.cs.sys.util.UUIDUtils;
 
 
 import javax.transaction.Transactional;
+import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Transactional
@@ -202,33 +201,45 @@ public class DocManagerImpl implements DocManager{
         Doc doc=mongoTemplate.findOne(query,Doc.class);
 
         //使用接口分词
-        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
-        Boolean init_flag = instance.NLPIR_Init("", 1, "0");
+//        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
+        Boolean init_flag = CNLPIRLibrary.Instance.NLPIR_Init("E:\\java\\workspace\\platform", 1, "0");
         String resultString = null;
         if (!init_flag) {
-            resultString = instance.NLPIR_GetLastErrorMsg();
+            resultString = CNLPIRLibrary.Instance.NLPIR_GetLastErrorMsg();
             System.err.println("初始化失败！\n"+resultString);
             return false;
         }
         String sInput = doc.getContent();
+        System.out.println("content:\n"+doc.getContent());
+        AnnotateTask task=new AnnotateTask();
         try{
-            resultString = instance.NLPIR_ParagraphProcess(sInput, 1);
-            System.out.println("分词结果为：\n " + resultString);
+            if (annotate_type.equals("中文分词")){
+                resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 0);
+                String[] segmentWord=resultString.split(" ");
+                task.setSegmentWord(segmentWord);
+            }else if (annotate_type.equals("词性标注")){
+                resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 1);
+//                resultString.replaceAll("\\","#");
+                String[] segmentWord=resultString.split(" ");
+                task.setPropertyWord(segmentWord);
+//                System.out.println("词性标注结果为：\n " + resultString);
+            }else if (annotate_type.equals("关键词提取")){
+                resultString=CNLPIRLibrary.Instance.NLPIR_GetKeyWords(sInput,3,false);
+                System.out.println("关键词：\n "+resultString);
+            }
             //将分词结果存为task并加入doc的tasks中
             //如果tasks中有这项任务则更新  没有则新建任务并加入
             //待修改
-            String[] segmentWord=resultString.split(" ");
-            System.out.println(segmentWord);
-            AnnotateTask task=new AnnotateTask();
             task.setAnnotation_type(annotate_type);
             task.setAnnotator("admin");
             task.setTask_id(UUIDUtils.getUUID());
-            task.setSegmentWord(segmentWord);
+
             task.setPhrase("初审");
             task.setTask_name(doc.getName());
             task.setStatus("待审核");
             task.setDoc_id(id);
             task.setCreated_time(DateGenerate.getDate());
+            task.setUpdate_time(DateGenerate.getDate());
             ArrayList<AnnotateTask> tasks=new ArrayList<>();
             if (doc.getTasks()==null){
                 tasks.add(task);
@@ -238,12 +249,12 @@ public class DocManagerImpl implements DocManager{
             }
             doc.setTasks(tasks);
             //更新已发布任务
-            ArrayList<String> newTasks=new ArrayList<>();
+            Set<String> newTasks=new HashSet<>();
             if (doc.getPublish()==null){
                 newTasks.add(annotate_type);
             }else {
                 newTasks=doc.getPublish();
-                newTasks.add(annotate_type+"/");
+                if (!newTasks.contains(annotate_type))newTasks.add(annotate_type+"/");
             }
             Update update = new Update().set("tasks",tasks)
                     .set("publish",newTasks);
@@ -258,13 +269,18 @@ public class DocManagerImpl implements DocManager{
 
 
     @Override
-    public Boolean recallPublish(String doc_id,String task_id) {
+    public Boolean recallPublish(String doc_id,String annotation_type) {
         try{
             Query query=new Query(Criteria.where("doc_id").is(doc_id));
             Doc doc=mongoTemplate.findOne(query,Doc.class);
+//            System.out.println(doc.getTasks().size()+"task.size");
+            if (doc==null)return false;
+            if(doc.getTasks()==null)return false;
+//            assert doc != null;
+            System.out.println(doc.getTasks().size()+"task.size");
             ArrayList<AnnotateTask> tasks=doc.getTasks();
             for (AnnotateTask task:tasks){
-                if (task.getTask_id()==task_id){
+                if (task.getAnnotation_type().equals(annotation_type)){
                     tasks.remove(task);
                 }
             }

@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Set;
 
 
 @Getter
@@ -48,9 +49,9 @@ public class Doc  implements Serializable {
     //最新修改时间
     private String last_modified;
     //已发布
-    private ArrayList<String> publish;
+    private Set<String> publish;
     //已完成
-    private ArrayList<String> done;
+    private Set<String> done;
     //任务列表
     @DBRef
     private ArrayList<AnnotateTask> tasks;

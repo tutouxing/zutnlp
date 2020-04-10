@@ -75,11 +75,11 @@ public class DocController {
 
     @ApiOperation(value = "分词和词性标注")
     @PostMapping(value = "/publishTask")
-    public Boolean publishTask(@RequestParam(required = false) String annotate_type,@RequestParam(required = false) String doc_id){
+    public Boolean publishTask(@RequestParam(required = false) String annotate_type,@RequestParam(required = false) String doc_id) throws Exception {
         System.out.println(annotate_type+doc_id);
-        if (annotate_type.equals("中文分词")||annotate_type.equals("词性标注")){
+//        if (annotate_type.equals("中文分词")||annotate_type.equals("词性标注")){
             docManager.segmentWord(doc_id,annotate_type);
-        }
+//        }
         return true;
     }
 
@@ -98,8 +98,8 @@ public class DocController {
 
     @ApiOperation(value = "撤销发布")
     @PostMapping(value = "/cancelPublishTask")
-    public Boolean cancelPublishTask(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String task_id){
-        return docManager.recallPublish(doc_id,task_id);
+    public Boolean cancelPublishTask(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotation_type){
+        return docManager.recallPublish(doc_id,annotation_type);
     }
 
     @ApiOperation(value = "upload doc")

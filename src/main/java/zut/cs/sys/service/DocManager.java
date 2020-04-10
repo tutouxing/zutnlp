@@ -34,5 +34,5 @@ public interface DocManager  {
     List<AnnotateTask> findAllTaskByDocId(String id);
 
     Boolean segmentWord(String id,String annotate_type) throws Exception;
-    Boolean recallPublish(String doc_id,String task_id);
+    Boolean recallPublish(String doc_id,String annotation_type);
 }
