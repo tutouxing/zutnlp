@@ -16,7 +16,7 @@ public interface CNLPIRLibrary extends Library {
 
      */
     //根据当前计算机环境决定使用resources下的NLPIR.dll插件，这里是win10-64
-    CNLPIRLibrary Instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
+    CNLPIRLibrary Instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\src\\main\\resources\\NLPIR", CNLPIRLibrary.class);
 
     /**
      * 初始化

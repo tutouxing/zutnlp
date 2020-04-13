@@ -42,10 +42,9 @@ public class DocController {
 
     @ApiOperation(value = "insert obj doc")
     @PostMapping(value = "/saveDoc")
-    public Boolean saveDoc(@RequestParam("file") MultipartFile file) throws IOException {
-        docManager.save(file.getOriginalFilename(),file);
+    public Boolean saveDoc(@RequestParam("file") MultipartFile file,@RequestParam(required = false)String user) throws IOException {
+        docManager.save(file.getOriginalFilename(),file,user);
         return true;
-//        return id;
     }
 
     @ApiOperation(value = "通过id查找")
@@ -77,10 +76,23 @@ public class DocController {
     @PostMapping(value = "/publishTask")
     public Boolean publishTask(@RequestParam(required = false) String annotate_type,@RequestParam(required = false) String doc_id) throws Exception {
         System.out.println(annotate_type+doc_id);
-//        if (annotate_type.equals("中文分词")||annotate_type.equals("词性标注")){
-            docManager.segmentWord(doc_id,annotate_type);
-//        }
-        return true;
+        return docManager.segmentWord(doc_id,annotate_type);
+    }
+
+    @ApiOperation(value = "重新进行词性标注")
+    @PostMapping(value = "/reAnnotate")
+    public String[] reAnnotate(@RequestParam(required = false) String str,@RequestParam(required = false) String annotation_type){
+        return docManager.reAnnotation(str,annotation_type);
+    }
+
+    @ApiOperation(value = "人工修改标注后提交更新结果")
+    @PostMapping(value = "/saveReAnnotateByUser")
+    public Boolean saveReAnnotateByUser(@RequestParam(required = false)String annotator,
+                                        @RequestBody ArrayList<String> words,
+                                        @RequestParam(required = false)String doc_id,
+                                        @RequestParam(required = false)String task_id){
+
+        return docManager.saveReAnnotateByUser(annotator,words,doc_id,task_id);
     }
 
     @ApiOperation(value = "联合条件查询")
@@ -89,11 +101,23 @@ public class DocController {
         return docManager.findAllDocsByMulti();
     }
 
-    @ApiOperation(value = "词性分析/中文分词等")
+    @ApiOperation(value = "获取词性分析/中文分词等所有标注任务")
     @GetMapping(value = "/getAllTasks")
     public ArrayList<AnnotateTask> getAllTasks(){
-
         return docManager.getAllTasks();
+    }
+
+    @ApiOperation(value = "初审通过")
+    @PostMapping(value = "/passInitialReview")
+    public Boolean passInitialReview(@RequestParam(required = false)String doc_id,@RequestParam(required = false)String task_id){
+        return docManager.passInitialReview(doc_id,task_id);
+    }
+
+    @ApiOperation(value = "终审通过")
+    @PostMapping(value = "/passFinalReview")
+    public Boolean passFinalReview(@RequestParam(required = false)String doc_id,
+                                   @RequestParam(required = false)String task_id){
+        return docManager.passFinalReview(doc_id,task_id);
     }
 
     @ApiOperation(value = "撤销发布")
@@ -104,7 +128,7 @@ public class DocController {
 
     @ApiOperation(value = "upload doc")
     @PostMapping(value ="/uploadDoc")
-    public Object upload(@RequestParam("file")MultipartFile file) throws IOException {
+    public Object upload(@RequestParam("file")MultipartFile file,@RequestParam(required = false) String user) throws IOException {
 //        System.out.println(files.length);
 //        for (MultipartFile file:files){
         //文件名
@@ -114,7 +138,7 @@ public class DocController {
         if (!file.isEmpty()) {
             try {
                 String name = file.getOriginalFilename();
-                docManager.save(name, file);
+                docManager.save(name, file,user);
                 return true;
             } catch (Exception e) {
                 e.printStackTrace();

@@ -52,7 +52,7 @@ public class DocManagerImpl implements DocManager{
 
     //增加doc
     @Override
-    public Boolean save(String name, MultipartFile file) throws IOException {
+    public Boolean save(String name, MultipartFile file,String user) throws IOException {
 //        List<Doc> docs=new ArrayList<>();
         Doc doc=new Doc();
 //        doc.setDoc_id(id.toString());
@@ -75,7 +75,10 @@ public class DocManagerImpl implements DocManager{
         in.close();
         doc.setContent(content);
         doc.setLen(file.getSize());
-        doc.setPublisher("admin");
+        doc.setPublisher(user);
+        Set<String> set=new HashSet<>();
+        set.add("无");
+        doc.setDone(set);
         doc.setType(file.getContentType());
         mongoTemplate.save(doc);
         return true;
@@ -122,6 +125,48 @@ public class DocManagerImpl implements DocManager{
 //        mongoTemplate.updateMulti(query,update,Book.class);
         //upsert 更新对象不存在则去添加
 //        mongoTemplate.upsert(query,update,Book.class);
+    }
+
+    @Override
+    public Boolean saveReAnnotateByUser(String annotator, ArrayList<String> words,String doc_id, String task_id) {
+//        Query query=new Query(Criteria.where("task_id").is(task_id));
+//        AnnotateTask task= mongoTemplate.findOne(query,AnnotateTask.class);
+//        if (task==null)return false;
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return false;
+        ArrayList<AnnotateTask> tasks=doc.getTasks();
+        for (AnnotateTask task:tasks){
+            if (task.getTask_id().equals(task_id)){
+                task.setAnnotator(annotator);
+                if (task.getAnnotation_type().equals("中文分词")){
+                    ArrayList<ArrayList<String>> segmentWords=new ArrayList<>();
+                    for (String s:words){
+                        String[] word=s.split("#");
+                        segmentWords.add(new ArrayList<String>(Arrays.asList(word)));
+                    }
+                    task.setSegmentWord(segmentWords);
+                    task.setPhrase("二标");
+                }else if (task.getAnnotation_type().equals("词性标注")){
+                    ArrayList<ArrayList<String>> propertyWords=new ArrayList<>();
+                    for (String s:words){
+                        String[] word=s.split("#");
+                        propertyWords.add(new ArrayList<String>(Arrays.asList(word)));
+                    }
+                    task.setPropertyWord(propertyWords);
+                    task.setPhrase("二标");
+                }
+            }
+        }
+        doc.setTasks(tasks);
+        Update update=new Update().set("tasks",tasks);
+        try {
+            mongoTemplate.updateFirst(query,update,Doc.class);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
     }
 
     //通过id查询doc
@@ -199,7 +244,7 @@ public class DocManagerImpl implements DocManager{
         //初始化E:\java\workspace\platform\resources\NLPIR.dll
         Query query=new Query(Criteria.where("doc_id").is(id));
         Doc doc=mongoTemplate.findOne(query,Doc.class);
-
+        if(doc==null)return false;
         //使用接口分词
 //        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
         Boolean init_flag = CNLPIRLibrary.Instance.NLPIR_Init("E:\\java\\workspace\\platform", 1, "0");
@@ -209,32 +254,51 @@ public class DocManagerImpl implements DocManager{
             System.err.println("初始化失败！\n"+resultString);
             return false;
         }
-        String sInput = doc.getContent();
-        System.out.println("content:\n"+doc.getContent());
+
+        String sInputs[] = doc.getContent().split("\n|\r");
         AnnotateTask task=new AnnotateTask();
+
         try{
             if (annotate_type.equals("中文分词")){
-                resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 0);
-                String[] segmentWord=resultString.split(" ");
+                ArrayList<ArrayList<String>> segmentWord = new ArrayList<>();
+//                if (segmentWord.getClass().isArray())
+                for (String sInput : sInputs){
+                    resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 0);
+                    String[] words=resultString.split(" ");
+                    segmentWord.add(new ArrayList<String>(Arrays.asList(words)));
+                }
                 task.setSegmentWord(segmentWord);
             }else if (annotate_type.equals("词性标注")){
-                resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 1);
-//                resultString.replaceAll("\\","#");
-                String[] segmentWord=resultString.split(" ");
-                task.setPropertyWord(segmentWord);
+                ArrayList<ArrayList<String>> propertyWord=new ArrayList<>();
+                for (String sInput : sInputs){
+                    resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 1);
+                    String[] words=resultString.split(" ");
+                    System.out.println("word:");
+                    for (String word:words){
+                        word=word.replace("/","");
+
+                        System.out.println(word);
+                    }
+                    propertyWord.add(new ArrayList<>(Arrays.asList(words)));
+                }
+                task.setPropertyWord(propertyWord);
 //                System.out.println("词性标注结果为：\n " + resultString);
             }else if (annotate_type.equals("关键词提取")){
+                String sInput=doc.getContent();
                 resultString=CNLPIRLibrary.Instance.NLPIR_GetKeyWords(sInput,3,false);
+                String[] keyWords=resultString.split(" ");
+                for (String word:keyWords){
+                    System.out.println(word);
+                }
                 System.out.println("关键词：\n "+resultString);
             }
             //将分词结果存为task并加入doc的tasks中
             //如果tasks中有这项任务则更新  没有则新建任务并加入
             //待修改
             task.setAnnotation_type(annotate_type);
-            task.setAnnotator("admin");
+            task.setAnnotator("admin");//待改正
             task.setTask_id(UUIDUtils.getUUID());
-
-            task.setPhrase("初审");
+            task.setPhrase("一标");
             task.setTask_name(doc.getName());
             task.setStatus("待审核");
             task.setDoc_id(id);
@@ -254,37 +318,60 @@ public class DocManagerImpl implements DocManager{
                 newTasks.add(annotate_type);
             }else {
                 newTasks=doc.getPublish();
-                if (!newTasks.contains(annotate_type))newTasks.add(annotate_type+"/");
+                if (!newTasks.contains(annotate_type))newTasks.add("/"+annotate_type);
             }
             Update update = new Update().set("tasks",tasks)
-                    .set("publish",newTasks);
+                    .set("publish",newTasks)
+                    .set("last_modified",DateGenerate.getDate());
             UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
-
+            return true;
         }catch (Exception e){
             e.printStackTrace();
+            return false;
         }
-        return true;
     }
 
-
+    @Override
+    public String[] reAnnotation(String str, String annotation_type) {
+        Boolean init_flag = CNLPIRLibrary.Instance.NLPIR_Init("E:\\java\\workspace\\platform", 1, "0");
+        String resultString = null;
+        if (!init_flag) {
+            resultString = CNLPIRLibrary.Instance.NLPIR_GetLastErrorMsg();
+            System.err.println("初始化失败！\n"+resultString);
+            return null;
+        }
+        System.out.println(str);
+        resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(str, 1);
+        String[] words=resultString.split(" ");
+        for (String word : words){
+            System.out.println(word);
+        }
+        return words;
+    }
 
     @Override
     public Boolean recallPublish(String doc_id,String annotation_type) {
         try{
+            System.out.println(doc_id+"?");
+//            Query query=new Query(Criteria.where("doc_id").is(id));
             Query query=new Query(Criteria.where("doc_id").is(doc_id));
             Doc doc=mongoTemplate.findOne(query,Doc.class);
 //            System.out.println(doc.getTasks().size()+"task.size");
             if (doc==null)return false;
             if(doc.getTasks()==null)return false;
-//            assert doc != null;
-            System.out.println(doc.getTasks().size()+"task.size");
             ArrayList<AnnotateTask> tasks=doc.getTasks();
+            tasks.removeIf(
+                    annotateTask -> annotateTask.getAnnotation_type().equals(annotation_type)
+            );
+            Set<String> publish=new HashSet<>();
             for (AnnotateTask task:tasks){
-                if (task.getAnnotation_type().equals(annotation_type)){
-                    tasks.remove(task);
-                }
+                if (publish.size()==0){
+                    publish.add(task.getAnnotation_type());
+                }else publish.add("/"+task.getAnnotation_type());
             }
-            Update update=new Update().set("tasks",tasks);
+            Update update=new Update().set("tasks",tasks)
+                    .set("publish",publish)
+                    .set("last_modified",DateGenerate.getDate());
             mongoTemplate.updateFirst(query,update,Doc.class);
 //            String status=null;
 //            String temp=doc.getAnnotation_type();
@@ -307,5 +394,52 @@ public class DocManagerImpl implements DocManager{
             return false;
         }
     }
+
+    @Override
+    public Boolean passInitialReview(String doc_id, String task_id) {
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return false;
+        ArrayList<AnnotateTask> tasks=doc.getTasks();
+        for (AnnotateTask task:tasks){
+            if (task.getTask_id().equals(task_id)){
+                task.setPhrase("二标");
+            }
+        }
+        Update update=new Update().set("tasks",tasks);
+        try {
+            mongoTemplate.updateFirst(query,update,Doc.class);
+            return true;
+        }catch (Exception e){
+//            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public Boolean passFinalReview(String doc_id, String task_id) {
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return false;
+        ArrayList<AnnotateTask> tasks=doc.getTasks();
+        Set<String> done=new HashSet<>();
+        Iterator<String> it=doc.getDone().iterator();
+        while (it.hasNext()){
+            if (it.next().equals("无")){
+                continue;
+            }else if (done.size()==0)done.add(it.next());
+            else done.add("/"+it.next());
+        }
+        Update update=new Update().set("tasks",tasks)
+                .set("done",done);
+        try {
+            mongoTemplate.updateFirst(query,update,Doc.class);
+            return true;
+        }catch (Exception e){
+//            e.printStackTrace();
+            return false;
+        }
+    }
+
 
 }

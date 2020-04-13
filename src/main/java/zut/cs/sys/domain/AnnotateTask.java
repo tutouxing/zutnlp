@@ -10,6 +10,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import java.io.Serializable;
+import java.util.ArrayList;
 
 @Document(collection = "tasks")
 @Getter
@@ -34,9 +35,9 @@ public class AnnotateTask implements Serializable {
     //阶段：初审、终审
     private String phrase;
     //分词结果
-    private String[] segmentWord;
+    private ArrayList<ArrayList<String>> segmentWord;
     //词性标注结果
-    private String[] propertyWord;
+    private ArrayList<ArrayList<String>> propertyWord;
     //标注者：初审专家、终审专家/admin
     private String annotator;
     //任务创建时间
