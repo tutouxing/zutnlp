@@ -40,6 +40,8 @@ public class AnnotateTask implements Serializable {
     private ArrayList<ArrayList<String>> propertyWord;
     //标注者：初审专家、终审专家/admin
     private String annotator;
+    //发布者
+    private String publisher;
     //任务创建时间
     private String created_time;
     //最后更新时间

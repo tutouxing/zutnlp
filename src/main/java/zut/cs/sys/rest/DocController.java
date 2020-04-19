@@ -74,9 +74,10 @@ public class DocController {
 
     @ApiOperation(value = "分词和词性标注")
     @PostMapping(value = "/publishTask")
-    public Boolean publishTask(@RequestParam(required = false) String annotate_type,@RequestParam(required = false) String doc_id) throws Exception {
-        System.out.println(annotate_type+doc_id);
-        return docManager.segmentWord(doc_id,annotate_type);
+    public Boolean publishTask(@RequestParam(required = false) String annotate_type,
+                               @RequestParam(required = false) String doc_id,
+                               @RequestParam(required = false) String username) throws Exception {
+        return docManager.segmentWord(doc_id,annotate_type,username);
     }
 
     @ApiOperation(value = "重新进行词性标注")
@@ -87,12 +88,24 @@ public class DocController {
 
     @ApiOperation(value = "人工修改标注后提交更新结果")
     @PostMapping(value = "/saveReAnnotateByUser")
-    public Boolean saveReAnnotateByUser(@RequestParam(required = false)String annotator,
-                                        @RequestBody ArrayList<String> words,
+    public Boolean saveReAnnotateByUser(@RequestBody ArrayList<String> words,
+                                        @RequestParam(required = false)String annotator,
                                         @RequestParam(required = false)String doc_id,
                                         @RequestParam(required = false)String task_id){
 
         return docManager.saveReAnnotateByUser(annotator,words,doc_id,task_id);
+    }
+
+    @ApiOperation(value = "合并标注")
+    @PostMapping(value = "/mergeAnnotation")
+    public Boolean mergeAnnotation(@RequestBody ArrayList<String> words,
+                                   @RequestParam(required = false)String doc_id,
+                                   @RequestParam(required = false)String task1_id,
+                                   @RequestParam(required = false)String task2_id,
+                                   @RequestParam(required = false)String annotator){
+        //task1_id为要更新的任务id，task2_id为要删除的task
+
+        return docManager.mergeAnnotation(words,doc_id,task1_id,task2_id,annotator);
     }
 
     @ApiOperation(value = "联合条件查询")
@@ -129,22 +142,16 @@ public class DocController {
     @ApiOperation(value = "upload doc")
     @PostMapping(value ="/uploadDoc")
     public Object upload(@RequestParam("file")MultipartFile file,@RequestParam(required = false) String user) throws IOException {
-//        System.out.println(files.length);
-//        for (MultipartFile file:files){
-        //文件名
-//            String name = file.getOriginalFilename();
-//            docManager.save(name,file);
-//        }
+        System.out.println("??username="+user);
         if (!file.isEmpty()) {
             try {
                 String name = file.getOriginalFilename();
-                docManager.save(name, file,user);
-                return true;
+                return docManager.save(name, file,user);
+//                return true;
             } catch (Exception e) {
                 e.printStackTrace();
                 return false;
             }
         }else return false;
-
     }
 }

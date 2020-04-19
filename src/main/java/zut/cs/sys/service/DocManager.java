@@ -26,6 +26,7 @@ public interface DocManager  {
 
     Boolean updateDoc(Doc doc);
     Boolean saveReAnnotateByUser(String annotator,ArrayList<String> words,String doc_id,String task_id);
+    Boolean mergeAnnotation(ArrayList<String> words,String doc_id,String task1_id,String task2_id,String annotator);
 
     Doc findDocById(String id) throws IOException;
     Doc findByName(String annotator) throws IOException;
@@ -36,7 +37,7 @@ public interface DocManager  {
 
 /*业务处理*/
     //分词
-    Boolean segmentWord(String id,String annotate_type) throws Exception;
+    Boolean segmentWord(String id,String annotate_type,String username) throws Exception;
     Boolean recallPublish(String doc_id,String annotation_type);
     Boolean passInitialReview(String doc_id,String task_id);
     Boolean passFinalReview(String doc_id,String task_id);
