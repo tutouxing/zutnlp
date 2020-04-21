@@ -154,4 +154,10 @@ public class DocController {
             }
         }else return false;
     }
+
+    @ApiOperation(value = "文本分类")
+    @GetMapping(value = "/textClassify")
+    public String textClassify(@RequestParam(required = false) String doc_id) throws IOException {
+        return docManager.textClassify(doc_id);
+    }
 }

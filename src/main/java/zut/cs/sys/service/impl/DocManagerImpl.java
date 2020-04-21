@@ -21,13 +21,17 @@ import zut.cs.sys.dao.DocDao;
 import zut.cs.sys.domain.AnnotateTask;
 import zut.cs.sys.domain.Doc;
 import zut.cs.sys.service.CNLPIRLibrary;
+import zut.cs.sys.service.DeepClassifierLibrary;
 import zut.cs.sys.service.DocManager;
 import zut.cs.sys.util.DateGenerate;
 import zut.cs.sys.util.UUIDUtils;
+import zut.cs.sys.util.fileutil.FileOperateUtils;
+import org.apache.commons.io.FileUtils;
 
 
 import javax.transaction.Transactional;
 import javax.validation.constraints.NotNull;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
@@ -398,6 +402,65 @@ public class DocManagerImpl implements DocManager{
         resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(str, 1);
         String[] words=resultString.split(" ");
         return words;
+    }
+
+    @Override
+    public String textClassify(String doc_id) throws IOException {
+        //1 分类过程--初始化
+        if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
+            System.out.println("deepClassifier初始化成功");
+        } else {
+            System.out.println("deepClassifier初始化失败" + DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
+            System.exit(1);
+        }
+
+        //2、训练过程--遍历训练分类文本的文件夹，添加所有的训练分类文本
+        ArrayList list = FileOperateUtils.getAllFilesPath(new File("训练分类用文本"));
+        for (int i = 0; i < list.size(); i++) {
+            File f = new File(list.get(i).toString());
+            String className = f.getParent();
+            className = className
+                    .substring(className.lastIndexOf("\\") + 1);
+            //将训练分类文本加载到内存中
+            String contentText = FileUtils.readFileToString(f, "utf-8");
+            boolean dc_AddTrain = DeepClassifierLibrary.Instance.DC_AddTrain(
+                    className, contentText);
+            if(!dc_AddTrain){
+                System.out.println(DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
+            }
+        }
+        //3、训练过程--开始训练
+        boolean dc_Train = DeepClassifierLibrary.Instance.DC_Train();
+        //4、训练过程--训练结束，退出
+        DeepClassifierLibrary.Instance.DC_Exit();
+
+        //查找doc
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return "失败";
+
+        //1、分类过程--初始化
+        if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
+            System.out.println("deepClassifier初始化成功");
+        } else {
+            System.out.println("deepClassifier初始化失败：" + DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
+            System.exit(1);
+        }
+
+//		Long DC_Handle = DeepClassifierLibrary.Instance.DC_NewInstance((long)800);
+        //2、分类过程--加载训练结果
+        DeepClassifierLibrary.Instance.DC_LoadTrainResult();
+
+        //3、分类过程--读取待分类的文本
+        String content = doc.getContent();
+                //FileOperateUtils.getFileContent("test.txt", "utf-8");
+
+        //4、分类过程--输出分类结果
+        System.out.println("分类结果：" + DeepClassifierLibrary.Instance.DC_Classify(content));
+
+        //5、分类过程--退出
+        DeepClassifierLibrary.Instance.DC_Exit();
+        return "成功";
     }
 
     @Override

@@ -42,4 +42,7 @@ public interface DocManager  {
     Boolean passInitialReview(String doc_id,String task_id);
     Boolean passFinalReview(String doc_id,String task_id);
     String[] reAnnotation(String str, String annotation_type);
+
+    //文本分类
+    String textClassify(String doc_id) throws IOException;
 }
