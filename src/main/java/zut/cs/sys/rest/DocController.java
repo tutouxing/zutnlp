@@ -160,4 +160,13 @@ public class DocController {
     public String textClassify(@RequestParam(required = false) String doc_id) throws IOException {
         return docManager.textClassify(doc_id);
     }
+
+
+    //命名实体
+    @ApiOperation(value = "命名实体抽取")
+    @GetMapping(value = "/getDocExtractor")
+    public String getDocExtractor(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotator) throws IOException {
+        System.out.println(doc_id);
+        return docManager.getDocExtractor(doc_id,annotator);
+    }
 }

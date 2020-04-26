@@ -45,4 +45,7 @@ public interface DocManager  {
 
     //文本分类
     String textClassify(String doc_id) throws IOException;
+
+    //命名实体抽取
+    String getDocExtractor(String doc_id,String annotator);
 }
