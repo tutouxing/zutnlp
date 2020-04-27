@@ -1,6 +1,7 @@
 package zut.cs.sys.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.tencentcloudapi.nlp.v20190408.models.NerToken;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -38,6 +39,8 @@ public class AnnotateTask implements Serializable {
     private ArrayList<ArrayList<String>> segmentWord;
     //词性标注结果
     private ArrayList<ArrayList<String>> propertyWord;
+    //命名实体识别结果
+    private NerToken[] tokens;
     //标注者：初审专家、终审专家/admin
     private String annotator;
     //发布者

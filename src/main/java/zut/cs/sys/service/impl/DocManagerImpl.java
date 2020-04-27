@@ -8,6 +8,13 @@ import com.mongodb.client.gridfs.model.GridFSFile;
 import com.mongodb.client.result.UpdateResult;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
+import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.common.profile.ClientProfile;
+import com.tencentcloudapi.cvm.v20170312.CvmClient;
+import com.tencentcloudapi.cvm.v20170312.models.DescribeZonesRequest;
+import com.tencentcloudapi.cvm.v20170312.models.DescribeZonesResponse;
+import com.tencentcloudapi.nlp.v20190408.NlpClient;
+import com.tencentcloudapi.nlp.v20190408.models.*;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -237,12 +244,6 @@ public class DocManagerImpl implements DocManager{
     @Override
     public Doc findDocById(String id) {
         Doc doc= mongoTemplate.findOne(new Query(Criteria.where("doc_id").is(id)),Doc.class);
-//        Optional<Doc> doc=docDao.findById(id);
-//        GridFSFile file=gridFsTemplate.findOne(new Query(Criteria.where("_id").is(id)));
-//        Doc doc=new Doc();
-//        doc.setContent(file.getMetadata().get("detail").toString());
-//        doc.setName(file.getMetadata().get("name").toString());
-//        doc.setCreated_time(file.getMetadata().get("created_time").toString());
         return doc;
     }
 
@@ -281,27 +282,10 @@ public class DocManagerImpl implements DocManager{
     @Override
     public List<AnnotateTask> findAllTaskByDocId(String id) {
         Doc doc=mongoTemplate.findOne(new Query(Criteria.where("doc_id").is(id)),Doc.class);
+        if (doc==null)return null;
         return doc.getTasks();
     }
 
-//    @Override
-//    public Boolean processDoc(Doc doc, String annotation_type) {
-        /*try{
-            String uuid= UUIDUtils.getUUID();
-            Query query = new Query(Criteria.where("doc_id").is(doc.getDoc_id()));
-            Update update = new Update().set("publish","true")
-//                    .set("annotator", doc.getAnnotator())
-                    .set("update_time", DateGenerate.getDate())
-//                    .set("phrase",doc.getPhrase())
-                    .set("task_id",uuid);
-            UpdateResult ur=mongoTemplate.updateFirst(query,update,Doc.class);
-            return true;
-        }catch (Exception e){
-            System.out.println(e.getStackTrace());
-            return false;
-        }*/
-//        return true;
-//    }
 
     @Override
     public Boolean segmentWord(String id,String annotate_type,String username) {
@@ -345,51 +329,27 @@ public class DocManagerImpl implements DocManager{
                 task.setPropertyWord(propertyWord);
 //                System.out.println("词性标注结果为：\n " + resultString);
             }else if (annotate_type.equals("关键词提取")){
-                if (DocExtractLibray.Instance.DE_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DocExtractor", 1, "") == 0) {
-                    System.out.println("初始化失败："
-                            + DocExtractLibray.Instance.DE_GetLastErrMsg());
-                    System.exit(1);
+                // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
+                Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
+
+                // 实例化要请求产品(以cvm为例)的client对象
+                ClientProfile clientProfile = new ClientProfile();
+                clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+                NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+
+                // 实例化一个请求对象
+                LexicalAnalysisRequest request=new LexicalAnalysisRequest();//命名实体
+                request.setText(doc.getContent());
+
+                // 通过client对象调用想要访问的接口，需要传入请求对象
+                LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
+                NerToken[] tokens=response.getNerTokens();
+                task.setTokens(tokens);
+                // 输出json格式的字符串回包
+                System.out.println("-----------");
+                for (NerToken token:tokens){
+                    System.out.println(token.getWord()+"  "+token.getType());
                 }
-                System.out.println("初始化成功");
-
-                String content = doc.getContent();
-                int score=DocExtractLibray.Instance.DE_ComputeSentimentDoc(content);
-                System.out.println("--->score--->"+score);
-                NativeLong handle = DocExtractLibray.Instance.DE_ParseDocE(content, "mgc#ngd",
-                        true, DocExtractLibray.ALL_REQUIRED);
-                System.out.println("抽取的人名为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_PERSON));
-                System.out.println("抽取的地名为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_LOCATION));
-                System.out.println("抽取的机构名为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_ORGANIZATION));
-                System.out.println("抽取的关键词为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_KEYWORD));
-                System.out.println("抽取的文章作者为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_AUTHOR));
-                System.out.println("抽取的媒体为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_MEDIA));
-                System.out.println("抽取的文章对应的所在国别为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_COUNTRY));
-                System.out.println("抽取的文章对应的所在省份为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_PROVINCE));
-                System.out.println("抽取的文章摘要为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_ABSTRACT));
-                System.out.println("输出文章的正面情感词为-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_POSITIVE));
-                System.out.println("输出文章的副面情感词-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_NEGATIVE));
-                System.out.println("输出文章原文-->" + content);
-                System.out.println("输出文章去除网页等标签后的正文-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_DEL_HTML));
-                System.out.println("去除空格:" + DocExtractLibray.Instance.DE_GetResult(handle, 11).replaceAll("[　*| *| *|//s*]*", ""));
-
-                System.out.println("自定义词(mgc)-->"
-                        + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_USER_DEFINED + 1));
-                System.out.println("情感值---->" + DocExtractLibray.Instance.DE_GetSentimentScore(handle));
-                DocExtractLibray.Instance.DE_ReleaseHandle(handle);
-
-                System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
             }
             CNLPIRLibrary.Instance.NLPIR_Exit();
             //将分词结果存为task并加入doc的tasks中
@@ -644,6 +604,48 @@ public class DocManagerImpl implements DocManager{
         DocExtractLibray.Instance.DE_ReleaseHandle(handle);
 
         System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
+        return null;
+    }
+
+    @Override
+    public String machineTranslate(String doc_id) {
+        try {
+            Query query=new Query(Criteria.where("doc_id").is(doc_id));
+            Doc doc=mongoTemplate.findOne(query,Doc.class);
+            if (doc==null)return "失败";
+            String text=doc.getContent();
+
+
+            // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
+            Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
+
+            // 实例化要请求产品(以cvm为例)的client对象
+            ClientProfile clientProfile = new ClientProfile();
+            clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+            NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+
+            // 实例化一个请求对象
+            KeywordsExtractionRequest request=new KeywordsExtractionRequest();//关键词
+            request.setText(text);
+            TextClassificationRequest classificationRequest=new TextClassificationRequest();//文本分类
+            classificationRequest.setText(text);
+
+            // 通过client对象调用想要访问的接口，需要传入请求对象
+//            DescribeZonesResponse resp = client.DescribeZones(req);
+            KeywordsExtractionResponse response=nlpClient.KeywordsExtraction(request);
+            Keyword[] keyword=response.getKeywords();
+            TextClassificationResponse classificationResponse=nlpClient.TextClassification(classificationRequest);
+
+            // 输出json格式的字符串回包
+            System.out.println("-----------");
+            for (Keyword word:keyword){
+                System.out.println(word.getWord());
+            }
+            System.out.println("--------------------");
+            System.out.println(classificationResponse.getClasses()[0].getFirstClassName());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         return null;
     }
 

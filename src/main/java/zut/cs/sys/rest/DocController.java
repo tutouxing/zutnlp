@@ -178,6 +178,7 @@ public class DocController {
     @GetMapping(value = "/getDocExtractor")
     public String getDocExtractor(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotator) {
         System.out.println(doc_id);
-        return docManager.getDocExtractor(doc_id,annotator);
+//        return docManager.getDocExtractor(doc_id,annotator);
+        return docManager.machineTranslate(doc_id);
     }
 }

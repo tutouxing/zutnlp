@@ -50,4 +50,7 @@ public interface DocManager  {
 
     //命名实体抽取
     String getDocExtractor(String doc_id,String annotator);
+
+    //机器翻译
+    String machineTranslate(String doc_id);
 }
