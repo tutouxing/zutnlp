@@ -161,11 +161,22 @@ public class DocController {
         return docManager.textClassify(doc_id);
     }
 
+    @ApiOperation(value = "保存文本分类结果")
+    @PostMapping(value = "/saveClassifyResult")
+    public Boolean saveClassifyResult(@RequestParam(required = false) String doc_id,@RequestParam(required = false)String classifyResult) {
+        return docManager.saveClassifyResult(doc_id,classifyResult);
+    }
+
+    @ApiOperation(value = "撤销文本分类结果")
+    @PostMapping(value = "/recallClassifyResult")
+    public Boolean recallClassifyResult(@RequestParam(required = false) String doc_id) {
+        return docManager.recallClassifyResult(doc_id);
+    }
 
     //命名实体
     @ApiOperation(value = "命名实体抽取")
     @GetMapping(value = "/getDocExtractor")
-    public String getDocExtractor(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotator) throws IOException {
+    public String getDocExtractor(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotator) {
         System.out.println(doc_id);
         return docManager.getDocExtractor(doc_id,annotator);
     }

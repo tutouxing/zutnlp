@@ -446,8 +446,43 @@ public class DocManagerImpl implements DocManager{
     }
 
     @Override
-    public String textClassify(String doc_id) throws IOException {
-        //1 分类过程--初始化
+    public Boolean saveClassifyResult(String doc_id, String result){
+        System.out.println(doc_id+result);
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return false;
+        try {
+            Update update=new Update().set("classifyResult",result)
+                    .set("last_modified",DateGenerate.getDate());
+            UpdateResult ur=mongoTemplate.updateFirst(query,update,"docs");
+            System.out.println(ur.getModifiedCount());
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public Boolean recallClassifyResult(String doc_id) {
+        Query query=new Query(Criteria.where("doc_id").is(doc_id));
+        Doc doc=mongoTemplate.findOne(query,Doc.class);
+        if (doc==null)return false;
+        try {
+            Update update=new Update().set("classifyResult",null)
+                    .set("last_modified",DateGenerate.getDate());
+            UpdateResult result=mongoTemplate.updateFirst(query,update,Doc.class);
+            System.out.println(result.getModifiedCount());
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public String textClassify(String doc_id) {
+        /*//1 分类过程--初始化
         if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
             System.out.println("deepClassifier初始化成功");
         } else {
@@ -473,7 +508,7 @@ public class DocManagerImpl implements DocManager{
         //3、训练过程--开始训练
         boolean dc_Train = DeepClassifierLibrary.Instance.DC_Train();
         //4、训练过程--训练结束，退出
-        DeepClassifierLibrary.Instance.DC_Exit();
+        DeepClassifierLibrary.Instance.DC_Exit();*/
 
         //查找doc
         Query query=new Query(Criteria.where("doc_id").is(doc_id));
@@ -497,11 +532,12 @@ public class DocManagerImpl implements DocManager{
                 //FileOperateUtils.getFileContent("test.txt", "utf-8");
 
         //4、分类过程--输出分类结果
-        System.out.println("分类结果：" + DeepClassifierLibrary.Instance.DC_Classify(content));
+        String result=DeepClassifierLibrary.Instance.DC_Classify(content);
+        System.out.println("分类结果：" + result);
 
         //5、分类过程--退出
         DeepClassifierLibrary.Instance.DC_Exit();
-        return "成功";
+        return result;
     }
 
     @Override

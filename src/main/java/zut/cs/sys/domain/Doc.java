@@ -44,6 +44,8 @@ public class Doc  implements Serializable {
     private String publisher;
     //字数
     private Long len;
+    //文本分类结果
+    private String classifyResult;
     //创建时间
     private String  created_time;
     //最新修改时间
