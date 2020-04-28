@@ -1,5 +1,6 @@
 package zut.cs.sys.rest;
 
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,7 +73,7 @@ public class DocController {
 //        return docManager.updateDoc(doc);
 //    }
 
-    @ApiOperation(value = "分词和词性标注")
+    @ApiOperation(value = "分词、词性标注、命名实体抽取")
     @PostMapping(value = "/publishTask")
     public Boolean publishTask(@RequestParam(required = false) String annotate_type,
                                @RequestParam(required = false) String doc_id,
@@ -157,7 +158,7 @@ public class DocController {
 
     @ApiOperation(value = "文本分类")
     @GetMapping(value = "/textClassify")
-    public String textClassify(@RequestParam(required = false) String doc_id) throws IOException {
+    public String textClassify(@RequestParam(required = false) String doc_id) throws IOException, TencentCloudSDKException {
         return docManager.textClassify(doc_id);
     }
 
@@ -173,12 +174,9 @@ public class DocController {
         return docManager.recallClassifyResult(doc_id);
     }
 
-    //命名实体
-    @ApiOperation(value = "命名实体抽取")
-    @GetMapping(value = "/getDocExtractor")
-    public String getDocExtractor(@RequestParam(required = false) String doc_id,@RequestParam(required = false) String annotator) {
-        System.out.println(doc_id);
-//        return docManager.getDocExtractor(doc_id,annotator);
-        return docManager.machineTranslate(doc_id);
+    @ApiOperation(value = "机器翻译")
+    @GetMapping(value = "/getTextTranslate")
+    public String getDocExtractor(@RequestParam(required = false) String text,@RequestParam(required = false) String targetLaug) {
+        return docManager.machineTranslate(text,targetLaug);
     }
 }

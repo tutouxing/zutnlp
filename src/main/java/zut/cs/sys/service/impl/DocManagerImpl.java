@@ -9,12 +9,16 @@ import com.mongodb.client.result.UpdateResult;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLong;
 import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
 import com.tencentcloudapi.cvm.v20170312.CvmClient;
 import com.tencentcloudapi.cvm.v20170312.models.DescribeZonesRequest;
 import com.tencentcloudapi.cvm.v20170312.models.DescribeZonesResponse;
 import com.tencentcloudapi.nlp.v20190408.NlpClient;
 import com.tencentcloudapi.nlp.v20190408.models.*;
+import com.tencentcloudapi.tmt.v20180321.TmtClient;
+import com.tencentcloudapi.tmt.v20180321.models.TextTranslateRequest;
+import com.tencentcloudapi.tmt.v20180321.models.TextTranslateResponse;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -328,28 +332,35 @@ public class DocManagerImpl implements DocManager{
                 }
                 task.setPropertyWord(propertyWord);
 //                System.out.println("词性标注结果为：\n " + resultString);
-            }else if (annotate_type.equals("关键词提取")){
+            }else if (annotate_type.equals("命名实体")){
                 // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
                 Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
 
-                // 实例化要请求产品(以cvm为例)的client对象
-                ClientProfile clientProfile = new ClientProfile();
-                clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
-                NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
-
-                // 实例化一个请求对象
-                LexicalAnalysisRequest request=new LexicalAnalysisRequest();//命名实体
-                request.setText(doc.getContent());
-
-                // 通过client对象调用想要访问的接口，需要传入请求对象
-                LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
-                NerToken[] tokens=response.getNerTokens();
+                ArrayList<NerToken> tokens=new ArrayList<>();
+                for (String sInput:sInputs){
+                    System.out.println(sInput);
+                    if (sInput==null||sInput.equals(""))continue;
+                    // 实例化要请求产品的client对象
+                    ClientProfile clientProfile = new ClientProfile();
+                    clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+                    NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+                    // 实例化一个请求对象
+                    LexicalAnalysisRequest request=new LexicalAnalysisRequest();//命名实体
+                    request.setText(sInput);
+                    // 通过client对象调用想要访问的接口，需要传入请求对象
+                    LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
+                    NerToken[] token=response.getNerTokens();
+                    if (token==null)continue;
+                    System.out.println("token="+token.length);
+                    for (NerToken t:token){
+                        System.out.println(t.getWord()+"  "+t.getType());
+                    }
+                    tokens.addAll(Arrays.asList(token));
+                }
                 task.setTokens(tokens);
                 // 输出json格式的字符串回包
                 System.out.println("-----------");
-                for (NerToken token:tokens){
-                    System.out.println(token.getWord()+"  "+token.getType());
-                }
+
             }
             CNLPIRLibrary.Instance.NLPIR_Exit();
             //将分词结果存为task并加入doc的tasks中
@@ -475,7 +486,7 @@ public class DocManagerImpl implements DocManager{
         Doc doc=mongoTemplate.findOne(query,Doc.class);
         if (doc==null)return "失败";
 
-        //1、分类过程--初始化
+        /*//1、分类过程--初始化
         if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
             System.out.println("deepClassifier初始化成功");
         } else {
@@ -496,157 +507,57 @@ public class DocManagerImpl implements DocManager{
         System.out.println("分类结果：" + result);
 
         //5、分类过程--退出
-        DeepClassifierLibrary.Instance.DC_Exit();
-        return result;
-    }
+        DeepClassifierLibrary.Instance.DC_Exit();*/
 
-    @Override
-    public String getDocExtractor(String doc_id,String annotator) {
-        /*
-        测试导入用户自定义词
-        if ( DocExtractLibray.Instance.DE_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DocExtractor", 1, "") == 0 ) {
-            System.out.println("DocExtractor初始化失败：" + DocExtractLibray.Instance.DE_GetLastErrMsg());
-            System.exit(1);
-        }
-        System.out.println("DocExtractor初始化成功");
-        System.out.println("成功导入的自定义词个数：" + DocExtractLibray.Instance.DE_ImportUserDict("dict/userdic.txt"));
-
-        System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
-         */
-
-        /*//测试导入自定义的情感词
-        //1、初始化
-		if ( DocExtractLibray.Instance.DE_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DocExtractor", 1, "") == 0 ) {
-			System.out.println("DocExtractor初始化失败：" + DocExtractLibray.Instance.DE_GetLastErrMsg());
-			System.exit(1);
-		}
-		System.out.println("DocExtractor初始化成功");
-
-		//2、导入自定义词典
-		System.out.println("成功导入的自定义词个数：" + DocExtractLibray.Instance.DE_ImportUserDict("dict/userdic.txt"));
-		//3、导入自定义情感词典
-		System.out.println("成功导入的情感词个数：" + DocExtractLibray.Instance.DE_ImportSentimentDict("dict/mySentimentDict.txt"));
-
-		//4、退出
-		System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
-
-        //测试导入黑名单，注意：黑名单中的词不会出现在关键词中。
-        if ( DocExtractLibray.Instance.DE_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DocExtractor", 1, "") == 0 ) {
-			System.out.println("DocExtractor初始化失败：" + DocExtractLibray.Instance.DE_GetLastErrMsg());
-			System.exit(1);
-		}
-		System.out.println("DocExtractor初始化成功");
-		System.out.println("成功导入的黑名单词个数：" + DocExtractLibray.Instance.DE_ImportKeyBlackList("dict/myKeyBlackList.txt"));
-
-		System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
-*/
-        /*
-        测试文章实体抽取
-         */
-//        AnnotateTask task=new AnnotateTask();
-//        task.setAnnotator(annotator);
-//        task.setUpdate_time(DateGenerate.getDate());
-//        task.setPublisher(annotator);
-//        task.setCreated_time(DateGenerate.getDate());
-//        task.setDoc_id(doc_id);
-        if (DocExtractLibray.Instance.DE_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DocExtractor", 1, "") == 0) {
-            System.out.println("初始化失败："
-                    + DocExtractLibray.Instance.DE_GetLastErrMsg());
-            System.exit(1);
-        }
-        System.out.println("初始化成功");
-
-        String content = "新华社北京2月10日电 （记者隋笑飞）中共中央政治局常委、中央书记处书记刘云山2月8日和9日，代表习近平总书记和党中央看望文化界知名人士，向他们致以诚挚问候，向广大文化工作者致以新春祝福。\n" +
-                "\n" +
-                "　　刘云山首先来到中国人民大学教授、著名马克思主义哲学专家陈先达家中，关切询问陈先达的生活和工作情况，对他为党的思想理论建设作出的贡献给予肯定，陈先达就深化马克思主义理论研究、加强哲学社会科学教材教学工作提出建议。在中国文联荣誉委员、著名书法家沈鹏家中，刘云山悉心了解书法艺术传承发展情况，希望老一辈书法家继续发挥传帮带作用、为弘扬中华优秀传统文化贡献力量。在看望中国舞协名誉主席、著名芭蕾舞表演艺术家白淑湘时，刘云山赞赏她为芭蕾舞民族化进行的探索，白淑湘建议加强青年艺术人才培养、加大对代表国家水准的艺术门类扶持力度。在看望原新闻出版署署长、著名出版家宋木文时，刘云山与他就出版业现状和前景进行交流，认真听取他关于提高出版质量、加强版权保护、重视社会效益等建议。在中国作协名誉委员、著名少数民族作家玛拉沁夫家中，刘云山赞扬玛拉沁夫为民族文学发展做出的成绩，并与他就加强少数民族文艺创作、繁荣中华民族文艺园地进行探讨。\n" +
-                "\n" +
-                "　　文化界知名人士对习近平总书记和党中央的亲切关怀表示感谢，对党的十八大以来党治国理政的新举措新局面高度赞誉，对党和政府重视弘扬优秀传统文化、提升国家文化软实力等部署深表赞同，一致认为文化工作者赶上了好时代，文化发展展示出更加美好的前景。刘云山指出，国运兴、文运兴，文化是民族生存和发展的重要力量，实现中华民族伟大复兴的中国梦需要文化的繁荣兴盛。推进“四个全面”战略布局，赋予当代文化工作者重要责任和使命。希望广大文化工作者深入学习贯彻习近平总书记在文艺工作座谈会上的重要讲话精神，增强文化自信，坚守文化追求，树立正确创作导向，用更多更好的文化作品讲好中国故事、反映时代进步。要强化精品意识，学习老一辈文化工作者的优良传统，努力在扎根生活、扎根群众中丰富生活积淀，在深化艺术实践、积极探索创新中提高文艺表现力，为推动文化繁荣发展、建设社会主义文化强国作出积极贡献。各级党委、政府和有关部门要重视文化建设、关心文化人才，加强扶持引导、多办实事好事，为文化工作者施展才华创造良好条件。\n" +
-                "\n" +
-                "　　中共中央政治局委员、中宣部部长刘奇葆陪同看望。中宣部、教育部、文化部、新闻出版广电总局、中国文联、中国作协有关负责同志参加看望活动。\n" +
-                "\n" +
-                "\n" +
-                "　　《 人民日报 》（ 2015年02月11日 01 版）";
-//		String content = "王石是呼市中共代表团万科的";
-        int score=DocExtractLibray.Instance.DE_ComputeSentimentDoc(content);
-        System.out.println("--->score--->"+score);
-        NativeLong handle = DocExtractLibray.Instance.DE_ParseDocE(content, "mgc#ngd",
-                true, DocExtractLibray.ALL_REQUIRED);
-        System.out.println("抽取的人名为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_PERSON));
-        System.out.println("抽取的地名为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_LOCATION));
-        System.out.println("抽取的机构名为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_ORGANIZATION));
-        System.out.println("抽取的关键词为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_KEYWORD));
-        System.out.println("抽取的文章作者为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_AUTHOR));
-        System.out.println("抽取的媒体为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_MEDIA));
-        System.out.println("抽取的文章对应的所在国别为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_COUNTRY));
-        System.out.println("抽取的文章对应的所在省份为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_PROVINCE));
-        System.out.println("抽取的文章摘要为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_ABSTRACT));
-        System.out.println("输出文章的正面情感词为-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_POSITIVE));
-        System.out.println("输出文章的副面情感词-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_NEGATIVE));
-        System.out.println("输出文章原文-->" + content);
-        System.out.println("输出文章去除网页等标签后的正文-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_DEL_HTML));
-        System.out.println("去除空格:" + DocExtractLibray.Instance.DE_GetResult(handle, 11).replaceAll("[　*| *| *|//s*]*", ""));
-
-        System.out.println("自定义词(mgc)-->"
-                + DocExtractLibray.Instance.DE_GetResult(handle, DocExtractLibray.DOC_EXTRACT_TYPE_USER_DEFINED + 1));
-        System.out.println("情感值---->" + DocExtractLibray.Instance.DE_GetSentimentScore(handle));
-        DocExtractLibray.Instance.DE_ReleaseHandle(handle);
-
-        System.out.println("是否安全退出-->"+DocExtractLibray.Instance.DE_Exit());
-        return null;
-    }
-
-    @Override
-    public String machineTranslate(String doc_id) {
         try {
-            Query query=new Query(Criteria.where("doc_id").is(doc_id));
-            Doc doc=mongoTemplate.findOne(query,Doc.class);
-            if (doc==null)return "失败";
-            String text=doc.getContent();
+            // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
+            Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
 
+            // 实例化要请求产品(以nlp为例)的client对象
+            ClientProfile clientProfile = new ClientProfile();
+            clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+            NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
 
+            // 实例化一个请求对象
+            TextClassificationRequest classificationRequest=new TextClassificationRequest();//文本分类
+            classificationRequest.setText(doc.getContent());
+            TextClassificationResponse classificationResponse=nlpClient.TextClassification(classificationRequest);
+            System.out.println(classificationResponse.getClasses()[0].getFirstClassName());
+            return classificationResponse.getClasses()[0].getFirstClassName();
+        }catch (TencentCloudSDKException e){
+            System.out.println(e.toString());
+            return null;
+        }
+    }
+
+    @Override
+    public String machineTranslate(String text, String targetLaug) {
+        try {
             // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
             Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
 
             // 实例化要请求产品(以cvm为例)的client对象
             ClientProfile clientProfile = new ClientProfile();
             clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
-            NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+            TmtClient tmtClient=new TmtClient(cred,"ap-guangzhou",clientProfile);
 
             // 实例化一个请求对象
-            KeywordsExtractionRequest request=new KeywordsExtractionRequest();//关键词
-            request.setText(text);
-            TextClassificationRequest classificationRequest=new TextClassificationRequest();//文本分类
-            classificationRequest.setText(text);
+            TextTranslateRequest textTranslateRequest=new TextTranslateRequest();
+            textTranslateRequest.setSourceText(text);
+            textTranslateRequest.setSource("auto");
+            textTranslateRequest.setTarget(targetLaug);
 
             // 通过client对象调用想要访问的接口，需要传入请求对象
 //            DescribeZonesResponse resp = client.DescribeZones(req);
-            KeywordsExtractionResponse response=nlpClient.KeywordsExtraction(request);
-            Keyword[] keyword=response.getKeywords();
-            TextClassificationResponse classificationResponse=nlpClient.TextClassification(classificationRequest);
+            TextTranslateResponse response=tmtClient.TextTranslate(textTranslateRequest);
 
             // 输出json格式的字符串回包
-            System.out.println("-----------");
-            for (Keyword word:keyword){
-                System.out.println(word.getWord());
-            }
-            System.out.println("--------------------");
-            System.out.println(classificationResponse.getClasses()[0].getFirstClassName());
+            System.out.println(response.getTargetText());
+            return response.getTargetText();
         }catch (Exception e){
             e.printStackTrace();
+            return "失败";
         }
-        return null;
     }
 
     @Override

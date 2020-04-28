@@ -1,5 +1,6 @@
 package zut.cs.sys.service;
 
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import org.springframework.web.multipart.MultipartFile;
 import zut.cs.sys.domain.AnnotateTask;
 import zut.cs.sys.domain.Doc;
@@ -36,7 +37,7 @@ public interface DocManager  {
     List<AnnotateTask> findAllTaskByDocId(String id);
 
 /*业务处理*/
-    //分词
+    //分词词性标注命名实体抽取
     Boolean segmentWord(String id,String annotate_type,String username) throws Exception;
     Boolean recallPublish(String doc_id,String annotation_type);
     Boolean passInitialReview(String doc_id,String task_id);
@@ -48,9 +49,6 @@ public interface DocManager  {
     Boolean saveClassifyResult(String doc_id, String result);
     Boolean recallClassifyResult(String doc_id);
 
-    //命名实体抽取
-    String getDocExtractor(String doc_id,String annotator);
-
     //机器翻译
-    String machineTranslate(String doc_id);
+    String machineTranslate(String text, String targetLaug);
 }

@@ -40,7 +40,7 @@ public class AnnotateTask implements Serializable {
     //词性标注结果
     private ArrayList<ArrayList<String>> propertyWord;
     //命名实体识别结果
-    private NerToken[] tokens;
+    private ArrayList<NerToken> tokens;
     //标注者：初审专家、终审专家/admin
     private String annotator;
     //发布者
