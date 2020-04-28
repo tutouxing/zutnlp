@@ -338,7 +338,6 @@ public class DocManagerImpl implements DocManager{
 
                 ArrayList<NerToken> tokens=new ArrayList<>();
                 for (String sInput:sInputs){
-                    System.out.println(sInput);
                     if (sInput==null||sInput.equals(""))continue;
                     // 实例化要请求产品的client对象
                     ClientProfile clientProfile = new ClientProfile();
@@ -350,16 +349,13 @@ public class DocManagerImpl implements DocManager{
                     // 通过client对象调用想要访问的接口，需要传入请求对象
                     LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
                     NerToken[] token=response.getNerTokens();
+//                    输出json回调包
+//                    System.out.println(LexicalAnalysisRequest.toJsonString(response));
                     if (token==null)continue;
-                    System.out.println("token="+token.length);
-                    for (NerToken t:token){
-                        System.out.println(t.getWord()+"  "+t.getType());
-                    }
                     tokens.addAll(Arrays.asList(token));
                 }
+                if (tokens.size()==0)return false;
                 task.setTokens(tokens);
-                // 输出json格式的字符串回包
-                System.out.println("-----------");
 
             }
             CNLPIRLibrary.Instance.NLPIR_Exit();
@@ -453,62 +449,10 @@ public class DocManagerImpl implements DocManager{
 
     @Override
     public String textClassify(String doc_id) {
-        /*//1 分类过程--初始化
-        if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
-            System.out.println("deepClassifier初始化成功");
-        } else {
-            System.out.println("deepClassifier初始化失败" + DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
-            System.exit(1);
-        }
-
-        //2、训练过程--遍历训练分类文本的文件夹，添加所有的训练分类文本
-        ArrayList list = FileOperateUtils.getAllFilesPath(new File("训练分类用文本"));
-        for (int i = 0; i < list.size(); i++) {
-            File f = new File(list.get(i).toString());
-            String className = f.getParent();
-            className = className
-                    .substring(className.lastIndexOf("\\") + 1);
-            //将训练分类文本加载到内存中
-            String contentText = FileUtils.readFileToString(f, "utf-8");
-            boolean dc_AddTrain = DeepClassifierLibrary.Instance.DC_AddTrain(
-                    className, contentText);
-            if(!dc_AddTrain){
-                System.out.println(DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
-            }
-        }
-        //3、训练过程--开始训练
-        boolean dc_Train = DeepClassifierLibrary.Instance.DC_Train();
-        //4、训练过程--训练结束，退出
-        DeepClassifierLibrary.Instance.DC_Exit();*/
-
         //查找doc
         Query query=new Query(Criteria.where("doc_id").is(doc_id));
         Doc doc=mongoTemplate.findOne(query,Doc.class);
         if (doc==null)return "失败";
-
-        /*//1、分类过程--初始化
-        if (DeepClassifierLibrary.Instance.DC_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\DeepClassifier", 1, 800, "")) {
-            System.out.println("deepClassifier初始化成功");
-        } else {
-            System.out.println("deepClassifier初始化失败：" + DeepClassifierLibrary.Instance.DC_GetLastErrorMsg());
-            System.exit(1);
-        }
-
-//		Long DC_Handle = DeepClassifierLibrary.Instance.DC_NewInstance((long)800);
-        //2、分类过程--加载训练结果
-        DeepClassifierLibrary.Instance.DC_LoadTrainResult();
-
-        //3、分类过程--读取待分类的文本
-        String content = doc.getContent();
-                //FileOperateUtils.getFileContent("test.txt", "utf-8");
-
-        //4、分类过程--输出分类结果
-        String result=DeepClassifierLibrary.Instance.DC_Classify(content);
-        System.out.println("分类结果：" + result);
-
-        //5、分类过程--退出
-        DeepClassifierLibrary.Instance.DC_Exit();*/
-
         try {
             // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
             Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
@@ -546,9 +490,9 @@ public class DocManagerImpl implements DocManager{
             textTranslateRequest.setSourceText(text);
             textTranslateRequest.setSource("auto");
             textTranslateRequest.setTarget(targetLaug);
+            textTranslateRequest.setProjectId((long) 1181226);
 
             // 通过client对象调用想要访问的接口，需要传入请求对象
-//            DescribeZonesResponse resp = client.DescribeZones(req);
             TextTranslateResponse response=tmtClient.TextTranslate(textTranslateRequest);
 
             // 输出json格式的字符串回包

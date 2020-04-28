@@ -176,7 +176,7 @@ public class DocController {
 
     @ApiOperation(value = "机器翻译")
     @GetMapping(value = "/getTextTranslate")
-    public String getDocExtractor(@RequestParam(required = false) String text,@RequestParam(required = false) String targetLaug) {
-        return docManager.machineTranslate(text,targetLaug);
+    public String getDocExtractor(@RequestParam(required = false) String text,@RequestParam(required = false) String targetLang) {
+        return docManager.machineTranslate(text,targetLang);
     }
 }
