@@ -153,6 +153,7 @@ public class DocManagerImpl implements DocManager{
 
     @Override
     public Boolean saveReAnnotateByUser(String annotator, ArrayList<String> words,String doc_id, String task_id) {
+        try {
         System.out.println("annotator="+annotator);
         Query query=new Query(Criteria.where("doc_id").is(doc_id));
         Doc doc=mongoTemplate.findOne(query,Doc.class);
@@ -164,22 +165,38 @@ public class DocManagerImpl implements DocManager{
                 task.setAnnotator(annotator);
                 task.setUpdate_time(DateGenerate.getDate());
                 if (task.getAnnotation_type().equals("中文分词")){
-                    ArrayList<ArrayList<String>> segmentWords=new ArrayList<>();
-                    for (String s:words){
-                        ArrayList<String> word= new ArrayList<>(Arrays.asList(s.split("#")));// Arrays.asList(s.split("#"));
-                        word.removeIf(
-                                s1 -> s1.equals("")
+                    ArrayList<ArrayList<PosToken>> segmentWords=new ArrayList<>();
+                    for (String word:words){
+                        String[] ss=word.split("#");
+                        ArrayList<PosToken> posTokens=new ArrayList<>();
+                        for (String s:ss){
+                            if (s.equals(""))continue;
+                            PosToken posToken=new PosToken();
+                            posToken.setWord(s);
+                            posTokens.add(posToken);
+                        }
+                        posTokens.removeIf(
+                                posToken -> posToken.getWord().equals("")
                         );
-//                        System.out.println("word:");
-                        segmentWords.add(new ArrayList<String>(word));
+                        segmentWords.add(new ArrayList<PosToken>(posTokens));
                     }
                     task.setSegmentWord(segmentWords);
                     task.setPhrase("二标");
                 }else if (task.getAnnotation_type().equals("词性标注")){
-                    ArrayList<ArrayList<String>> propertyWords=new ArrayList<>();
-                    for (String s:words){
-                        String[] word=s.split("#");
-                        propertyWords.add(new ArrayList<String>(Arrays.asList(word)));
+                    ArrayList<ArrayList<PosToken>> propertyWords=new ArrayList<>();
+                    for (String phrase:words){
+                        String[] word=phrase.split("#");
+                        ArrayList<PosToken> posTokens=new ArrayList<>();
+                        for (String w:word){
+                            if (w.equals(""))continue;
+                            String[] pos=w.split("/");
+                            PosToken posToken=new PosToken();
+                            posToken.setWord(pos[0]);
+                            posToken.setPos(pos[1]);
+                            posTokens.add(posToken);
+                        }
+                        propertyWords.add(new ArrayList<PosToken>(posTokens));
+//                        propertyWords.add(new ArrayList<String>(Arrays.asList(word)));
                     }
                     task.setPropertyWord(propertyWords);
                     task.setPhrase("二标");
@@ -188,7 +205,7 @@ public class DocManagerImpl implements DocManager{
         }
         doc.setTasks(tasks);
         Update update=new Update().set("tasks",tasks);
-        try {
+
             mongoTemplate.updateFirst(query,update,Doc.class);
             return true;
         }catch (Exception e){
@@ -213,21 +230,37 @@ public class DocManagerImpl implements DocManager{
                 task.setAnnotator(annotator);
                 //处理words
                 if (task.getAnnotation_type().equals("中文分词")){
-                    ArrayList<ArrayList<String>> segmentWords=new ArrayList<>();
-                    for (String s:words){
-                        ArrayList<String> word= new ArrayList<>(Arrays.asList(s.split("#")));// Arrays.asList(s.split("#"));
-                        word.removeIf(
-                                s1 -> s1.equals("")
+                    ArrayList<ArrayList<PosToken>> segmentWords=new ArrayList<>();
+                    for (String word:words){
+                        String[] ss=word.split("#");
+                        ArrayList<PosToken> posTokens=new ArrayList<>();
+                        for (String s:ss){
+                            if (s.equals(""))continue;
+                            PosToken posToken=new PosToken();
+                            posToken.setWord(s);
+                            posTokens.add(posToken);
+                        }
+                        posTokens.removeIf(
+                                posToken -> posToken.getWord().equals("")
                         );
-                        segmentWords.add(new ArrayList<String>(word));
+                        segmentWords.add(new ArrayList<PosToken>(posTokens));
                     }
                     task.setSegmentWord(segmentWords);
                     task.setPhrase("三标");
                 }else if (task.getAnnotation_type().equals("词性标注")){
-                    ArrayList<ArrayList<String>> propertyWords=new ArrayList<>();
-                    for (String s:words){
-                        String[] word=s.split("#");
-                        propertyWords.add(new ArrayList<String>(Arrays.asList(word)));
+                    ArrayList<ArrayList<PosToken>> propertyWords=new ArrayList<>();
+                    for (String phrase:words){
+                        String[] word=phrase.split("#");
+                        ArrayList<PosToken> posTokens=new ArrayList<>();
+                        for (String w:word){
+                            if (w.equals(""))continue;
+                            PosToken posToken=new PosToken();
+                            posToken.setWord(w.split("/")[0]);
+                            posToken.setPos(w.split("/")[1]);
+                            posTokens.add(posToken);
+                        }
+                        propertyWords.add(new ArrayList<PosToken>(posTokens));
+//                        propertyWords.add(new ArrayList<String>(Arrays.asList(word)));
                     }
                     task.setPropertyWord(propertyWords);
                     task.setPhrase("三标");
@@ -293,42 +326,55 @@ public class DocManagerImpl implements DocManager{
 
     @Override
     public Boolean segmentWord(String id,String annotate_type,String username) {
-        //初始化E:\java\workspace\platform\resources\NLPIR.dll
         Query query=new Query(Criteria.where("doc_id").is(id));
         Doc doc=mongoTemplate.findOne(query,Doc.class);
         if(doc==null)return false;
-        //使用接口分词
-//        CNLPIRLibrary instance = (CNLPIRLibrary) Native.loadLibrary("E:\\java\\workspace\\platform\\resources\\NLPIR", CNLPIRLibrary.class);
-        Boolean init_flag = CNLPIRLibrary.Instance.NLPIR_Init("E:\\java\\workspace\\platform\\src\\main\\resources\\ICTCLAS", 1, "0");
-        String resultString = null;
-        if (!init_flag) {
-            resultString = CNLPIRLibrary.Instance.NLPIR_GetLastErrorMsg();
-            System.err.println("初始化失败！\n"+resultString);
-            return false;
-        }
 
         String sInputs[] = doc.getContent().split("\n|\r");
         AnnotateTask task=new AnnotateTask();
 
         try{
             if (annotate_type.equals("中文分词")){
-                ArrayList<ArrayList<String>> segmentWord = new ArrayList<>();
+                ArrayList<ArrayList<PosToken>> segmentWord = new ArrayList<>();
 //                if (segmentWord.getClass().isArray())
                 for (String sInput : sInputs){
-                    resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 0);
-                    String[] words=resultString.split(" ");
-                    segmentWord.add(new ArrayList<String>(Arrays.asList(words)));
+                    if(sInput.equals(""))continue;
+                    System.out.println("sInput:"+sInput);
+
+                    // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
+                    Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
+
+                    // 实例化要请求产品的client对象
+                    ClientProfile clientProfile = new ClientProfile();
+                    clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+                    NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+                    // 实例化一个请求对象
+                    LexicalAnalysisRequest request=new LexicalAnalysisRequest();//命名实体
+                    request.setText(sInput);
+                    // 通过client对象调用想要访问的接口，需要传入请求对象
+                    LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
+                    PosToken[] posTokens=response.getPosTokens();
+                    segmentWord.add(new ArrayList<PosToken>(Arrays.asList(posTokens)));
                 }
                 task.setSegmentWord(segmentWord);
             }else if (annotate_type.equals("词性标注")){
-                ArrayList<ArrayList<String>> propertyWord=new ArrayList<>();
+                ArrayList<ArrayList<PosToken>> propertyWord=new ArrayList<>();
                 for (String sInput : sInputs){
-                    resultString = CNLPIRLibrary.Instance.NLPIR_ParagraphProcess(sInput, 1);
-                    String[] words=resultString.split(" ");
-                    for (String word:words){
-                        word=word.replace("/","");
-                    }
-                    propertyWord.add(new ArrayList<>(Arrays.asList(words)));
+                    if (sInput.equals(""))continue;
+                    // 实例化一个认证对象，入参需要传入腾讯云账户secretId，secretKey
+                    Credential cred = new Credential("AKIDk25XdVjpKgqncs5jLbfdKtEJDrXtJwe8", "NUIKyHJDuLXE0bykV2JLzhGbBdrqX1e6");
+
+                    // 实例化要请求产品的client对象
+                    ClientProfile clientProfile = new ClientProfile();
+                    clientProfile.setSignMethod(ClientProfile.SIGN_TC3_256);
+                    NlpClient nlpClient=new NlpClient(cred,"ap-guangzhou",clientProfile);
+                    // 实例化一个请求对象
+                    LexicalAnalysisRequest request=new LexicalAnalysisRequest();//命名实体
+                    request.setText(sInput);
+                    // 通过client对象调用想要访问的接口，需要传入请求对象
+                    LexicalAnalysisResponse response=nlpClient.LexicalAnalysis(request);
+                    PosToken[] posTokens=response.getPosTokens();
+                    propertyWord.add(new ArrayList<PosToken>(Arrays.asList(posTokens)));
                 }
                 task.setPropertyWord(propertyWord);
 //                System.out.println("词性标注结果为：\n " + resultString);
@@ -358,7 +404,6 @@ public class DocManagerImpl implements DocManager{
                 task.setTokens(tokens);
 
             }
-            CNLPIRLibrary.Instance.NLPIR_Exit();
             //将分词结果存为task并加入doc的tasks中
             //如果tasks中有这项任务则更新  没有则新建任务并加入
             //待修改

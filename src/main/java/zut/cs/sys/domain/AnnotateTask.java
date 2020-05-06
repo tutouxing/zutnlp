@@ -2,6 +2,7 @@ package zut.cs.sys.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.tencentcloudapi.nlp.v20190408.models.NerToken;
+import com.tencentcloudapi.nlp.v20190408.models.PosToken;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -36,9 +37,9 @@ public class AnnotateTask implements Serializable {
     //阶段：初审、终审
     private String phrase;
     //分词结果
-    private ArrayList<ArrayList<String>> segmentWord;
+    private ArrayList<ArrayList<PosToken>> segmentWord;
     //词性标注结果
-    private ArrayList<ArrayList<String>> propertyWord;
+    private ArrayList<ArrayList<PosToken>> propertyWord;
     //命名实体识别结果
     private ArrayList<NerToken> tokens;
     //标注者：初审专家、终审专家/admin
